@@ -3,6 +3,7 @@
 #include "bvh-loader/BVHReader.h"
 #include "Camera.hpp"
 #include "bvh-loader/GlHelper/DrawHelper.h"
+#include "MotionLoader.hpp"
 
 using namespace std;
 
@@ -25,26 +26,16 @@ class UserInterface {
         static UserInterface *curr;
 
     private:
-        std::unique_ptr<BVHReader> bvh = nullptr;
+        std::unique_ptr<MotionLoader> motionLoader = nullptr;
 
         GLfloat mousePosX, mousePosY;
         Camera *currView;
-        Segment *toMove;
 
-        map<string, double> flexibility;
-        std::vector<std::vector<Segment *>> endSites;
-        void getJoints();
-        int currEndSite;
-        
-        void prevSite();
-        void nextSite();
         void nextFrame();
         void reload();
-        void jointOptions(string args);
         void helpText();
 
         unsigned timeStep = 30;
-        bool moveObject = false;
 
         int width, height;
 

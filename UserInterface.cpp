@@ -1,16 +1,16 @@
 #include <string>
 #include <iostream>
 #include "UserInterface.hpp"
-#include <GL/gl.h>
-#include <GL/glu.h>
-#include <GL/freeglut.h>
 
 using namespace std;
+
+void glutBitmapString(void* font, const char* string){
+	glutBitmapString(font, reinterpret_cast<const unsigned char *>(string));
+}
 
 UserInterface *UserInterface::curr = nullptr;
 
 void UserInterface::initialize(){
-	endSites[currEndSite].back()->setColor(Eigen::Vector3d(0.0, 1.0, 1.0));
 	currView = &mainCamera;
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
 	glutInitWindowSize(800, 600);
@@ -22,100 +22,6 @@ void UserInterface::initialize(){
 	glutKeyboardFunc(UserInterface::KeyboardEvent);
 	glutMouseFunc(UserInterface::MouseEvent);
 	glutMotionFunc(UserInterface::MotionEvent);
-}
-
-vector<string> UserInterface::splitString(string str){
-    vector<string> result; 
-    istringstream iss(str); 
-    for(string s; iss >> s; ) 
-        result.push_back(s);
-    return result;
-}
-
-void UserInterface::getJoints(){
-	/*
-		Get the list of endsites with the list of corresponding joints connected to it.
-		BVHReader object will have control of Segment objects, ignore memory usage
-	*/
-	Segment * root = bvh->getRoot();
-	flexibility = map<string, double>();
-	endSites = vector<vector<Segment *>>();
-
-    vector<pair<Segment *, int>> segQ;
-	segQ.push_back(pair<Segment *, int>(root, 0));
-
-    while(segQ.size() > 0){
-        auto pr = segQ.back();
-		Segment *curr = pr.first;
-		int segCount = pr.second;
-        segQ.pop_back();
-
-		/* End Site case */
-		if (curr->numSub() == 0){
-			vector<Segment *> endPath;
-			for (auto joint : segQ){
-				endPath.push_back(joint.first);
-			}
-			endPath.push_back(curr);
-			endSites.push_back(endPath);
-
-			flexibility.insert(make_pair(curr->getName(), 1.0));
-
-			continue;
-		}
-
-        int segs = curr->numSub();
-        if (segCount < segs){
-            segQ.push_back(pair<Segment *, int>(curr, segCount + 1));
-			segQ.push_back(pair<Segment *, int>(curr->getSeg(segCount), 0));
-        }
-		else{
-			flexibility.insert(make_pair(curr->getName(), 1.0));
-		}
-    }
-
-	return;
-}
-
-void UserInterface::jointOptions(string line){
-	int spacepos = line.find(' ');
-	string cmd = line.substr(0, spacepos);
-	string args = line.substr(spacepos + 1, line.length() - spacepos - 1);
-
-	if (cmd == "list"){
-		if (args == "curr"){
-			for (int i = 0; i < endSites[currEndSite].size(); i++){
-				string name = endSites[currEndSite][i]->getName();
-				cout << name << ", " << flexibility[name] << endl;
-			}
-		}
-		else{
-			for (pair<string, double> flex : flexibility){
-				cout << flex.first << ", " << flex.second << endl;
-			}
-		}
-	}
-	else if (cmd == "flex"){
-		int spacepos = args.find(' ');
-		string jointName = args.substr(0, spacepos);
-		if (flexibility.count(jointName)){
-			try {
-				flexibility[jointName] = stod(args.substr(spacepos));
-			}
-			catch (exception &e){
-				cout << "Could not parse flexibility value." << endl;
-			}
-		}
-		else {
-			cout << "Joint " << jointName << " not found." << endl;
-		}
-	}
-	else {
-		cout << "joint list: " << "List selected joints." << endl;
-		cout << "joint flex (j) (v): " << "Set flexibility of joint (j) to (v)." << endl;
-	}
-
-	return;
 }
 
 void UserInterface::loadGlobalCoord()
@@ -192,44 +98,6 @@ void UserInterface::keyboard(unsigned char key, int x, int y) {
 	}
 }
 
-void UserInterface::reload(){
-    vector<Segment *> segQ;
-	segQ.push_back(this->bvh->getRoot());
-
-    while(segQ.size() > 0){
-        auto pr = segQ.back();
-		Segment *curr = pr;
-        segQ.pop_back();
-
-		curr->rotate(Eigen::Vector3d(0.0, 0.0, 0.0));
-		curr->translate(Eigen::Vector3d(0.0, 0.0, 0.0));
-		
-        for (int i = 0; i < pr->numSub(); i++){
-            segQ.push_back(pr->getSeg(i));
-        }
-    }
-
-	return;
-}
-
-void UserInterface::prevSite(){
-	endSites[currEndSite].back()->setColor(Eigen::Vector3d(1.0, 0.0, 0.0));
-	if (currEndSite > 0){
-		currEndSite -= 1;
-	}
-	else currEndSite = endSites.size() - 1;
-	endSites[currEndSite].back()->setColor(Eigen::Vector3d(0.0, 1.0, 1.0));
-}
-
-void UserInterface::nextSite(){
-	endSites[currEndSite].back()->setColor(Eigen::Vector3d(1.0, 0.0, 0.0));
-	if (currEndSite >= endSites.size() - 1){
-		currEndSite = 0;
-	}
-	else currEndSite += 1;
-	endSites[currEndSite].back()->setColor(Eigen::Vector3d(0.0, 1.0, 1.0));
-}
-
 void UserInterface::mouse(int button, int state, int x, int y)
 {
 	switch (button)
@@ -272,7 +140,7 @@ void UserInterface::drawGridPlane() {
 void UserInterface::helpText() {
 	glRasterPos2i(100, 120);
 	glColor4f(0.0f, 0.0f, 1.0f, 1.0f);
-	glutBitmapString(GLUT_BITMAP_HELVETICA_18, "W A S D : Accelerate/Turn");
+	glutBitmapString(GLUT_BITMAP_HELVETICA_18, "W A S D: Camera Move\nArrow Keys: Accelerate/Turn Character\nQ: Exit The Program");
 }
 
 void UserInterface::display() {
@@ -284,7 +152,7 @@ void UserInterface::display() {
 	glPushMatrix();
 	drawGridPlane();
 
-	bvh->draw();
+	motionLoader->draw();
 	
 	glPopMatrix();
 
