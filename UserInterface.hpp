@@ -3,7 +3,7 @@
 #include "bvh-loader/BVHReader.h"
 #include "Camera.hpp"
 #include "bvh-loader/GlHelper/DrawHelper.h"
-#include "MotionLoader.hpp"
+#include "Controller.hpp"
 
 using namespace std;
 
@@ -27,7 +27,7 @@ class UserInterface {
         static UserInterface *curr;
 
     private:
-        std::unique_ptr<MotionLoader> motionLoader = nullptr;
+        std::unique_ptr<Controller> motionLoader = nullptr;
 
         GLfloat mousePosX, mousePosY;
         Camera *currView;

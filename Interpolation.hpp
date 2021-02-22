@@ -1,1 +1,1 @@
-// add interpolation implementation here
+// Implementation of interpolation algorithm

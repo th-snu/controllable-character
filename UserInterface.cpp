@@ -81,7 +81,7 @@ void UserInterface::keyboard(unsigned char key, int x, int y) {
 		currView->move(Camera::Right);
 		break;
 	case ' ':
-		motionLoader.jump();
+		motionLoader->jump();
 	case '1':
 		nextFrame();
 		break;
@@ -126,11 +126,6 @@ void UserInterface::mouse(int button, int state, int x, int y) {
 		else if (state == GLUT_UP)
 		{
 			leftButton = false;
-		}
-		break;
-	case GLUT_RIGHT_BUTTON:
-		if (state == GLUT_DOWN){
-			moveObject = !moveObject;
 		}
 		break;
 	case 3:break;
