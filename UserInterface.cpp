@@ -20,6 +20,7 @@ void UserInterface::initialize(){
 	glutDisplayFunc(UserInterface::DisplayEvent);
 	glutTimerFunc(timeStep, UserInterface::TimerEvent, 0);
 	glutKeyboardFunc(UserInterface::KeyboardEvent);
+	glutSpecialFunc(UserInterface::SpecialEvent);
 	glutMouseFunc(UserInterface::MouseEvent);
 	glutMotionFunc(UserInterface::MotionEvent);
 }
@@ -41,6 +42,7 @@ void UserInterface::setCurrent(UserInterface *window){
 void UserInterface::DisplayEvent(){ current()->display(); }
 void UserInterface::KeyboardEvent(unsigned char key,int x,int y ){ current()->keyboard(key,x,y); }
 void UserInterface::MouseEvent(int button, int state, int x, int y) { current()->mouse(button,state,x,y); }
+void UserInterface::SpecialEvent(int key, int x, int y) { current()->special(key, x, y); }
 void UserInterface::MotionEvent(int x, int y) { current()->motion(x,y); }
 void UserInterface::ReshapeEvent(int w, int h) { current()->reshape(w,h); }
 void UserInterface::TimerEvent(int value) { current()->timer(value); }
@@ -78,12 +80,8 @@ void UserInterface::keyboard(unsigned char key, int x, int y) {
 	case 'd':
 		currView->move(Camera::Right);
 		break;
-	case 'q':
-        prevSite();
-		break;
-	case 'e':
-		nextSite();
-		break;
+	case ' ':
+		motionLoader.jump();
 	case '1':
 		nextFrame();
 		break;
@@ -98,8 +96,24 @@ void UserInterface::keyboard(unsigned char key, int x, int y) {
 	}
 }
 
-void UserInterface::mouse(int button, int state, int x, int y)
-{
+void UserInterface::special(int key, int x, int y) {
+	switch(key){
+		case GLUT_KEY_UP:
+		//do something here
+		break;
+		case GLUT_KEY_DOWN:
+		//do something here
+		break;
+		case GLUT_KEY_LEFT:
+		//do something here
+		break;
+		case GLUT_KEY_RIGHT:
+		//do something here
+		break;
+	}
+}
+
+void UserInterface::mouse(int button, int state, int x, int y) {
 	switch (button)
 	{
 	case GLUT_LEFT_BUTTON:

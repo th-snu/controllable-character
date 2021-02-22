@@ -19,6 +19,7 @@ class UserInterface {
 
         static void DisplayEvent();
         static void KeyboardEvent(unsigned char key,int x,int y);
+        static void SpecialEvent(int key, int x, int y);
         static void MouseEvent(int button, int state, int x, int y);
         static void MotionEvent(int x, int y);
         static void ReshapeEvent(int w, int h);
@@ -50,4 +51,5 @@ class UserInterface {
         void reshape(int w, int h);
         void timer(int unused);
         void keyboard(unsigned char key, int x, int y);
+        void special(int key, int x, int y);
 };

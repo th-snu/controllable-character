@@ -10,4 +10,6 @@ using namespace std;
 class MotionLoader {
 public:
     void draw();
+    BVHReader jump();
+    
 };
