@@ -11,6 +11,7 @@
 				"-g",
 				"${workspaceFolder}/main.cpp",
 				"${workspaceFolder}/Camera.cpp",
+				"${workspaceFolder}/Controller.cpp",
 				"${workspaceFolder}/UserInterface.cpp",
 				"${workspaceFolder}/bvh-loader/GlHelper/DrawHelper.cpp",
 				"${workspaceFolder}/bvh-loader/Segment.cpp",

@@ -1,5 +1,4 @@
 #include "Controller.hpp"
-#include "bvh-loader/BVHReader.h"
 
 Motion extractMotion(string filename){
     BVHReader reader(filename);
@@ -7,6 +6,54 @@ Motion extractMotion(string filename){
         return reader.getMotion();
     }
     else return vector<vector<double>>();
+}
+
+void Controller::draw(){
+    for(int i = 0; i < root.size(); i++){
+        root[i]->draw();
+    }
+}
+
+void Controller::accelerate(){
+    if (!to_move) to_move = true;
+    else if (goal_speed < 4) goal_speed += 1;
+}
+
+void Controller::brake(){
+    if (goal_speed == 1 && to_move) to_move = false;
+    else if (goal_speed > 1) goal_speed -= 1;
+}
+
+void Controller::stop(){
+    if (to_move) to_move = false;
+}
+
+void Controller::turn_left(){
+    if (goal_direction > -2) goal_direction -= 1;
+}
+
+void Controller::turn_right(){
+    if (goal_direction < 2) goal_direction += 1;
+}
+
+void Controller::jump(){
+    if (jump_flag < 3){
+        jump_flag += 1;
+        to_move = false;
+    }
+}
+
+vector<double> Controller::getMotion(){
+    if (!to_move && is_moving){
+        // character should stop moving nhy
+
+    }
+    else if (curr_direction != goal_direction){
+        
+    }
+    else if (curr_speed != goal_speed){
+
+    }
 }
 
 Controller::Controller(){
@@ -27,47 +74,87 @@ Controller::Controller(){
     vector<string> highjump = {"03", "04"};
     vector<string> forwardjump = {"05", "06", "07", "09", "10"};
 
-    vector<string> beginWalk = {"walk", "31", "32"};
-    vector<string> walkL45 = {"walk, veer left", "11", "12"};
-    vector<string> walkR45 = {"walk, veer right", "13", "14"};
-    vector<string> walk = {"walk", "15", "16"};
-    vector<string> walkL90 = {"walk, 90-degree left turn", "17", "18"};
-    vector<string> walkR90 = {"walk, 90-degree right turn", "19", "20"};
-    vector<string> walkStop = {"slow walk, stop", "33", "34"};
+    // List motion for each gesture.
+    vector<vector<string>> walk ;
+    walk.emplace_back(initializer_list<string>{"walk, veer left", "11", "12"});
+    walk.emplace_back(initializer_list<string>{"walk, veer right", "13", "14"});
+    walk.emplace_back(initializer_list<string>{"walk", "15", "16"});
+    walk.emplace_back(initializer_list<string>{"walk, 90-degree left turn", "17", "18"});
+    walk.emplace_back(initializer_list<string>{"walk, 90-degree right turn", "19", "20"});
+    walk.emplace_back(initializer_list<string>{"walk", "31", "32"});
+    walk.emplace_back(initializer_list<string>{"slow walk, stop", "33", "34"});
 
-    vector<string> fastwalkL45 = {"walk, veer left", "23", "24"};
-    vector<string> fastwalkR45 = {"walk, veer right", "25", "26"};
-    vector<string> fastwalk = {"walk", "21", "22"};
-    vector<string> fastwalkL90 = {"walk, 90-degree left turn", "27", "28"};
-    vector<string> fastwalkR90 = {"walk, 90-degree right turn", "29", "30"};
+    vector<vector<string>> fastwalk;
+    fastwalk.emplace_back(initializer_list<string>{"walk, veer left", "23", "24"});
+    fastwalk.emplace_back(initializer_list<string>{"walk, veer right", "25", "26"});
+    fastwalk.emplace_back(initializer_list<string>{"walk", "21", "22"});
+    fastwalk.emplace_back(initializer_list<string>{"walk, 90-degree left turn", "27", "28"});
+    fastwalk.emplace_back(initializer_list<string>{"walk, 90-degree right turn", "29", "30"});
+    fastwalk.emplace_back();
+    fastwalk.emplace_back();
     
-    vector<string> beginJog = {"run&jog", "56"};
-    vector<string> jogStop = {"run&jog, sudden stop", "08", "57"};
-    vector<string> jogL45 = {"run&jog, veer left", "37", "38"};
-    vector<string> jogR45 = {"run&jog, veer right", "39", "40"};
-    vector<string> jog = {"run&jog", "35", "36"};
-    vector<string> jogL90 = {"run&jog, 90-degree left turn", "41", "42"};
-    vector<string> jogR90 = {"run&jog, 90-degree right turn", "43", "44"};
+    vector<vector<string>> jog;
+    jog.emplace_back(initializer_list<string>{"run&jog, veer left", "37", "38"});
+    jog.emplace_back(initializer_list<string>{"run&jog, veer right", "39", "40"});
+    jog.emplace_back(initializer_list<string>{"run&jog", "35", "36"});
+    jog.emplace_back(initializer_list<string>{"run&jog, 90-degree left turn", "41", "42"});
+    jog.emplace_back(initializer_list<string>{"run&jog, 90-degree right turn", "43", "44"});
+    jog.emplace_back(initializer_list<string>{"run&jog", "56"});
+    jog.emplace_back(initializer_list<string>{"run&jog, sudden stop", "08", "57"});
 
-    vector<string> beginRun = {"run", "55"};
-    vector<string> runL45 = {"run, veer left", "48"};
-    vector<string> runR45 = {"run, veer right", "49", "50"};
-    vector<string> run = {"run&jog", "45", "46"}; 
-    vector<string> runL90 = {"run, 90-degree left turn", "51", "52"};
-    vector<string> runR90 = {"run, 90-degree right turn", "53", "54"};
+    vector<vector<string>> run;
+    run.emplace_back(initializer_list<string>{"run, veer left", "48"});
+    run.emplace_back(initializer_list<string>{"run, veer right", "49", "50"});
+    run.emplace_back(initializer_list<string>{"run&jog", "45", "46"});
+    run.emplace_back(initializer_list<string>{"run, 90-degree left turn", "51", "52"});
+    run.emplace_back(initializer_list<string>{"run, 90-degree right turn", "53", "54"});
+    run.emplace_back(initializer_list<string>{"run", "55"});
+    run.emplace_back();
 
     for(string data : jump){
         string filename = "16_" + data + "_jump.bvh";
-        this->jump.push_back(extractMotion(filename));
+        this->jump_data.push_back(extractMotion(filename));
     }
 
     for(string data : highjump){
         string filename = "16_" + data + "_high jump.bvh";
-        this->highjump.push_back(extractMotion(filename));
+        this->highjump_data.push_back(extractMotion(filename));
     }
 
     for(string data : forwardjump){
         string filename = "16_" + data + "_forward jump.bvh";
-        this->forwardjump.push_back(extractMotion(filename));
+        this->forwardjump_data.push_back(extractMotion(filename));
+    }
+
+    for(vector<string> pose : walk){
+        this->walk.emplace_back(vector<Motion>());
+        for(int i = 1; i < pose.size(); i++){
+            string filename = "16_" + pose[i] + "_" + pose[0] + ".bvh";
+            this->walk[this->walk.size() - 1].push_back(extractMotion(filename));
+        }
+    }
+
+    for(vector<string> pose : fastwalk){
+        this->fastwalk.emplace_back(vector<Motion>());
+        for(int i = 1; i < pose.size(); i++){
+            string filename = "16_" + pose[i] + "_" + pose[0] + ".bvh";
+            this->fastwalk[this->fastwalk.size() - 1].push_back(extractMotion(filename));
+        }
+    }
+
+    for(vector<string> pose : jog){
+        this->jog.emplace_back(vector<Motion>());
+        for(int i = 1; i < pose.size(); i++){
+            string filename = "16_" + pose[i] + "_" + pose[0] + ".bvh";
+            this->jog[this->jog.size() - 1].push_back(extractMotion(filename));
+        }
+    }
+
+    for(vector<string> pose : run){
+        this->run.emplace_back(vector<Motion>());
+        for(int i = 1; i < pose.size(); i++){
+            string filename = "16_" + pose[i] + "_" + pose[0] + ".bvh";
+            this->run[this->run.size() - 1].push_back(extractMotion(filename));
+        }
     }
 }

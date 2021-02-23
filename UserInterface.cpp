@@ -82,12 +82,6 @@ void UserInterface::keyboard(unsigned char key, int x, int y) {
 		break;
 	case ' ':
 		motionLoader->jump();
-	case '1':
-		nextFrame();
-		break;
-	case 'r':
-		reload();
-		break;
 	case 27:
 		exit(0);
 		break;
@@ -99,16 +93,16 @@ void UserInterface::keyboard(unsigned char key, int x, int y) {
 void UserInterface::special(int key, int x, int y) {
 	switch(key){
 		case GLUT_KEY_UP:
-		//do something here
+		motionLoader->accelerate();
 		break;
 		case GLUT_KEY_DOWN:
-		//do something here
+		motionLoader->brake();
 		break;
 		case GLUT_KEY_LEFT:
-		//do something here
+		motionLoader->turn_left();
 		break;
 		case GLUT_KEY_RIGHT:
-		//do something here
+		motionLoader->turn_right();
 		break;
 	}
 }
@@ -157,7 +151,6 @@ void UserInterface::display() {
 	glEnable(GL_DEPTH_TEST);
 	loadGlobalCoord();
 
-	//glRotatef(45, -1, 0, 0);
 	glPushMatrix();
 	drawGridPlane();
 

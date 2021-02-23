@@ -1,8 +1,6 @@
 #include <random>
 #include <map>
-#include "bvh-loader/BVHReader.h"
 #include "Camera.hpp"
-#include "bvh-loader/GlHelper/DrawHelper.h"
 #include "Controller.hpp"
 
 using namespace std;
