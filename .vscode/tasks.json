@@ -17,7 +17,7 @@
 				"${workspaceFolder}/bvh-loader/Segment.cpp",
 				"${workspaceFolder}/bvh-loader/BVHReader.cpp",
 				"-o",
-				"${workspaceFolder}/Inverse_Kinematics",
+				"${workspaceFolder}/Control",
 				"-lglut",
 				"-lGL",
 				"-lGLU",

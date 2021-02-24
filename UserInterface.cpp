@@ -12,6 +12,7 @@ UserInterface *UserInterface::curr = nullptr;
 
 void UserInterface::initialize(){
 	currView = &mainCamera;
+	controller.load_frame();
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
 	glutInitWindowSize(800, 600);
 	glutInitWindowPosition(50, 0);
@@ -63,7 +64,7 @@ void UserInterface::motion(int x, int y)
 }
 
 void UserInterface::nextFrame(){
-	// Get motion of the next frame
+	controller.load_frame();
 }
 
 void UserInterface::keyboard(unsigned char key, int x, int y) {
@@ -81,7 +82,11 @@ void UserInterface::keyboard(unsigned char key, int x, int y) {
 		currView->move(Camera::Right);
 		break;
 	case ' ':
-		motionLoader->jump();
+		controller.jump();
+		break;
+	case 'r':
+		controller.mode_change();
+		break;
 	case 27:
 		exit(0);
 		break;
@@ -93,37 +98,36 @@ void UserInterface::keyboard(unsigned char key, int x, int y) {
 void UserInterface::special(int key, int x, int y) {
 	switch(key){
 		case GLUT_KEY_UP:
-		motionLoader->accelerate();
+		controller.accelerate();
 		break;
 		case GLUT_KEY_DOWN:
-		motionLoader->brake();
+		controller.brake();
 		break;
 		case GLUT_KEY_LEFT:
-		motionLoader->turn_left();
+		controller.turn_left();
 		break;
 		case GLUT_KEY_RIGHT:
-		motionLoader->turn_right();
+		controller.turn_right();
 		break;
 	}
 }
 
 void UserInterface::mouse(int button, int state, int x, int y) {
-	switch (button)
-	{
-	case GLUT_LEFT_BUTTON:
-		if (state == GLUT_DOWN)
-		{
-			mousePosX = x;
-			mousePosY = y;
-			leftButton = true;
-		}
-		else if (state == GLUT_UP)
-		{
-			leftButton = false;
-		}
-		break;
-	case 3:break;
-	default:break;
+	switch (button){
+		case GLUT_LEFT_BUTTON:
+			if (state == GLUT_DOWN)
+			{
+				mousePosX = x;
+				mousePosY = y;
+				leftButton = true;
+			}
+			else if (state == GLUT_UP)
+			{
+				leftButton = false;
+			}
+			break;
+		case 3: break;
+		default: break;
 	}
 	return;
 }
@@ -142,20 +146,21 @@ void UserInterface::drawGridPlane() {
 
 void UserInterface::helpText() {
 	glRasterPos2i(100, 120);
-	glColor4f(0.0f, 0.0f, 1.0f, 1.0f);
-	glutBitmapString(GLUT_BITMAP_HELVETICA_18, "W A S D: Camera Move\nArrow Keys: Accelerate/Turn Character\nQ: Exit The Program");
+	glColor4f(0.0f, 0.0f, 0.5f, 1.0f);
+	glutBitmapString(GLUT_BITMAP_HELVETICA_18, "W A S D: Camera Move\nArrow Keys: Accelerate/Turn Character\nESC: Exit The Program");
 }
 
 void UserInterface::display() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	helpText();
 	glEnable(GL_DEPTH_TEST);
 	loadGlobalCoord();
 
 	glPushMatrix();
-	drawGridPlane();
-
-	motionLoader->draw();
-	
+	{
+		drawGridPlane();
+		controller.draw();
+	}
 	glPopMatrix();
 
 	glutSwapBuffers();
@@ -175,6 +180,7 @@ void UserInterface::reshape(int w, int h) {
 void UserInterface::timer(int unused)
 {
 	/* call the display callback and forces the current window to be displayed */
+	this->nextFrame();
 	glutPostRedisplay();
 	glutTimerFunc(timeStep, UserInterface::TimerEvent, 0);
 }

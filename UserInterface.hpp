@@ -22,10 +22,10 @@ class UserInterface {
         static void MotionEvent(int x, int y);
         static void ReshapeEvent(int w, int h);
         static void TimerEvent(int value);
-        static UserInterface *curr;
 
     private:
-        std::unique_ptr<Controller> motionLoader = nullptr;
+        Controller controller;
+        static UserInterface *curr;
 
         GLfloat mousePosX, mousePosY;
         Camera *currView;

@@ -5,12 +5,10 @@
 #include <GL/glu.h>
 #include <GL/freeglut.h>
 #include <queue>
+#include <random>
+#include <bits/stdc++.h>
 
 using namespace std;
-
-enum Pose {
-    L45, L90, Move, R45, R90, Begin, Stop
-};
 
 class Controller {
 /*
@@ -20,9 +18,11 @@ class Controller {
 public:
     Controller();
     void draw();
+    void load_frame();
+
     void accelerate();
     void brake();
-    void stop();
+    void mode_change();
     void turn_left();
     void turn_right();
     void jump();
@@ -37,19 +37,22 @@ private:
     vector<vector<Motion>> jog;
     vector<vector<Motion>> run;
 
+    vector<Motion> stop_data;
+
+    std::mt19937 gen;
+    uniform_int_distribution<int> dis;
+
 /*
     Jump will make the character to stop first, then jump, and then resume.
     Pressing key multiple times will change jump mode. It applies to turning motion as well.
 */
-    vector<Motion> jump_data;
-    vector<Motion> highjump_data;
-    vector<Motion> forwardjump_data;
+    vector<vector<Motion>> jump_data;
 
-    int curr_speed;
-    int curr_direction;
+    int curr_speed = 1;
+    int curr_direction = 0;
 
-    int goal_speed;
-    int goal_direction;
+    int goal_speed = 1;
+    int goal_direction = 0;
 
     int jump_flag;
     
@@ -58,8 +61,12 @@ private:
 
     vector<unique_ptr<Segment>> root;
 
-    double frame_pos;
-    queue<vector<double>> predicted_motion;
+    int curr_frame;
+    int interpolated_frame;
+    int next_motion_frame;
+    Motion predicted_motion;
+
+    bool input_flag = false;
 
 /*
     When character stops, it repeats last few frames of the last motion with interpolation.
@@ -68,5 +75,7 @@ private:
     When user decides to jump, character automatically stops, and Jump motion must be completed before moving onto next motion.
     Start/Stop motion should be completed at least partly.
 */
-    vector<double> getMotion();
+    vector<double> getPose();
+    void predictMotion();
+    void updateState();
 };
