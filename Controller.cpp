@@ -1,6 +1,6 @@
 #include "Controller.hpp"
 
-Motion extractMotion(string filename){
+Motion extractMotion(const string& filename){
     BVHReader reader(filename);
     if (reader.loadFile()){
         return reader.getMotion();
@@ -75,6 +75,14 @@ void Controller::jump(){
         to_move = false;
     }
     input_flag = true;
+}
+
+Eigen::Vector3d Controller::rotation(){
+    return this->root.front()->getRot();
+}
+
+Eigen::Vector3d Controller::translation(){
+    return this->root.front()->getTrans();
 }
 
 Controller::Controller(){
@@ -218,9 +226,18 @@ vector<double> Controller::getPose(){
 
 void Controller::updateState(){
     if (curr_frame >= next_motion_frame){
-        if (jump_flag && !is_moving) jump_flag = 0;
-        else if (is_moving && !to_move) is_moving = false;
-        else if (!is_moving && to_move) is_moving = true;
+        if (jump_flag && !is_moving) {
+            jump_flag = 0;
+            dont_disturb = false;
+        }
+        else if (is_moving && !to_move) {
+            is_moving = false;
+            dont_disturb = false;
+        }
+        else if (!is_moving && to_move) {
+            is_moving = true;
+            dont_disturb = false;
+        }
         else {
             curr_direction = goal_direction;
             curr_speed = goal_speed;
@@ -236,8 +253,13 @@ void Controller::predictMotion(){
 /*
     Choose motion that should be followed, and interpolate motion data.
 */
+    if (dont_disturb) return;
+
     vector<Motion>* next_motion = {};
-    if (jump_flag && !is_moving) next_motion = &(jump_data[jump_flag - 1]);
+    if (jump_flag && !is_moving) {
+        next_motion = &(jump_data[jump_flag - 1]);
+        dont_disturb = true;
+    }
     else if (!is_moving && !to_move) next_motion = &stop_data;
     else {
         vector<vector<Motion>>* speed = nullptr;
@@ -252,8 +274,14 @@ void Controller::predictMotion(){
                 speed = &walk; break;
         }
 
-        if (is_moving && !to_move) next_motion = &(speed->at(6));
-        else if (!is_moving && to_move) next_motion = &(speed->at(5));
+        if (is_moving && !to_move) {
+            next_motion = &(speed->at(6));
+            dont_disturb = true;
+        }
+        else if (!is_moving && to_move) {
+            next_motion = &(speed->at(5));
+            dont_disturb = true;
+        }
         else next_motion = &(speed->at(goal_direction + 2));
     }
 
@@ -265,20 +293,8 @@ void Controller::predictMotion(){
     next_motion_frame -= curr_frame;
     curr_frame = 0;
 
-    int old_size = predicted_motion.size();
-
     // if current motion is not finished, reinterpolate motion with the next motion
-    if (curr_frame < interpolated_frame) {
-        predicted_motion = Motion(predicted_motion.begin(), predicted_motion.begin() + interpolated_frame);
-        old_size = interpolated_frame;
-        predicted_motion.insert(predicted_motion.end(), next_data.begin(), next_data.end());
-    }
-    else {
-        // else just interpolate from current frame
-        predicted_motion.insert(predicted_motion.end(), next_data.begin(), next_data.end());
-    }
-    next_motion_frame = old_size;
-    interpolated_frame = old_size;
+    predicted_motion = interpolate_motion(predicted_motion, next_data, interpolated_frame, next_motion_frame);
 
     input_flag = false;
 }

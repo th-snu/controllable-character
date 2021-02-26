@@ -1,12 +1,12 @@
 #pragma once
 #include "bvh-loader/GlHelper/DrawHelper.h"
-#include "bvh-loader/BVHReader.h"
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GL/freeglut.h>
 #include <queue>
 #include <random>
 #include <bits/stdc++.h>
+#include "Interpolation.hpp"
 
 using namespace std;
 
@@ -26,6 +26,9 @@ public:
     void turn_left();
     void turn_right();
     void jump();
+
+    Eigen::Vector3d rotation();
+    Eigen::Vector3d translation();
 
 private:
 /*
@@ -67,6 +70,7 @@ private:
     Motion predicted_motion;
 
     bool input_flag = false;
+    bool dont_disturb = false;
 
 /*
     When character stops, it repeats last few frames of the last motion with interpolation.
