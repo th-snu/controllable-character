@@ -142,12 +142,6 @@ Controller::Controller(){
     run.emplace_back(initializer_list<string>{"run", "55"});
     run.emplace_back(initializer_list<string>{"run&jog, sudden stop", "08", "57"});
 
-    /*
-    
-    process and interpolate straight motion so the beginning and the ending would have the same orientation here
-    
-    */
-
     for(string data : jump){
         this->jump_data.emplace_back(vector<Motion>());
         string filename = "16_" + data + "_jump.bvh";
@@ -201,11 +195,17 @@ Controller::Controller(){
     // Extract stop motion from the end of stopping walk motion.
     this->stop_data = this->walk[6];
     for (auto &motion : this->stop_data){
-        motion = Motion(motion.end() - 20, motion.end());
+        motion = Motion(motion.end() - 15, motion.end());
         Eigen::Quaterniond stop_orientation = bvh_to_quaternion(Eigen::Vector3d(motion[0][3], motion[0][4], motion[0][5]));
         motion = interpolate_motion(motion, motion, false);
         motion = interpolate_motion(motion, motion, false);
     }
+
+    /*
+    
+    process and interpolate straight motion so the beginning and the ending would have the same orientation here
+    
+    */
 
     predicted_motion = this->walk[2][0];
     input_flag = true;
@@ -227,7 +227,6 @@ vector<double> Controller::getPose(){
     else {
         this->updateState();
         this->predictMotion();
-        curr_frame = 0;
     }
 
     return predicted_motion[curr_frame];

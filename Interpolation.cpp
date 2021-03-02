@@ -79,10 +79,10 @@ Motion interpolate_motion(Motion old_motion, Motion next_motion, bool time_shift
     Vector3d last_pos(last_frames[0][0], last_frames[0][1], last_frames[0][2]);
     Vector3d next_pos(next_frames[0][0], next_frames[0][1], next_frames[0][2]);
 
+    // preprocess motion data instead so the beginning and the ending would have the same orientation
     Quaterniond last_ori = slerp_frames_orientation(last_frames);
     Quaterniond next_ori = slerp_frames_orientation(next_frames);
 
-    // uniform resampling
     Quaterniond rot(AngleAxisd(get_y_rotation(next_ori, last_ori), Vector3d::UnitY()));
 
     Vector3d trans = last_pos - rot * next_pos;
