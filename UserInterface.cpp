@@ -12,7 +12,7 @@ UserInterface *UserInterface::curr = nullptr;
 
 void UserInterface::initialize(){
 	currView = &mainCamera;
-	controller.load_frame();
+	pos = controller.load_frame();
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
 	glutInitWindowSize(800, 600);
 	glutInitWindowPosition(50, 0);
@@ -64,7 +64,9 @@ void UserInterface::motion(int x, int y)
 }
 
 void UserInterface::nextFrame(){
-	controller.load_frame();
+	auto old_pos = pos;
+	pos = controller.load_frame();
+	currView->moveTo(currView->getEye() + pos.cast<float>() - old_pos.cast<float>());
 }
 
 void UserInterface::keyboard(unsigned char key, int x, int y) {
@@ -134,26 +136,44 @@ void UserInterface::mouse(int button, int state, int x, int y) {
 
 void UserInterface::drawGridPlane() {
 	glBegin(GL_LINES);
-	glColor3f(0, 1, 0);
+	glColor3f(1, 0, 0.5);
+	int x_offset = currView->getEye()[0];
+	int z_offset = currView->getEye()[2];
+	x_offset = x_offset - (x_offset % 100);
+	z_offset = z_offset - (z_offset % 100);
 	for (int i = -1000; i < 1001; i+=100){
-		glVertex3f(i, 0, -1000);
-		glVertex3f(i, 0, 1000);
-		glVertex3f(1000, 0, i);
-		glVertex3f(-1000, 0, i);
+		glVertex3f(i + x_offset, 0, -1000 + z_offset);
+		glVertex3f(i + x_offset, 0, 1000 + z_offset);
+		glVertex3f(1000 + x_offset, 0, i + z_offset);
+		glVertex3f(-1000 + x_offset, 0, i + z_offset);
 	}
 	glEnd();
 }
 
 void UserInterface::helpText() {
+	glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+	gluOrtho2D(0.0, width, 0.0, height);
+	glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+
 	glRasterPos2i(100, 120);
-	glColor4f(0.0f, 0.0f, 0.5f, 1.0f);
 	glutBitmapString(GLUT_BITMAP_HELVETICA_18, "W A S D: Camera Move\nArrow Keys: Accelerate/Turn Character\nESC: Exit The Program");
+
+	glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+	glMatrixMode(GL_MODELVIEW);
 }
 
 void UserInterface::display() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	helpText();
 	glEnable(GL_DEPTH_TEST);
+	glClearColor(0.5f, 0.8f, 0.9f, 1.0f);
 	loadGlobalCoord();
 
 	glPushMatrix();
@@ -162,6 +182,7 @@ void UserInterface::display() {
 		controller.draw();
 	}
 	glPopMatrix();
+	helpText();
 
 	glutSwapBuffers();
 }

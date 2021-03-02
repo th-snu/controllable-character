@@ -26,6 +26,7 @@ class UserInterface {
     private:
         Controller controller;
         static UserInterface *curr;
+        Eigen::Vector3d pos;
 
         GLfloat mousePosX, mousePosY;
         Camera *currView;

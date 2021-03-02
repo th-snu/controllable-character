@@ -18,7 +18,7 @@ class Controller {
 public:
     Controller();
     void draw();
-    void load_frame();
+    Eigen::Vector3d load_frame();
 
     void accelerate();
     void brake();
@@ -42,22 +42,19 @@ private:
 
     vector<Motion> stop_data;
 
-    std::mt19937 gen;
-    uniform_int_distribution<int> dis;
-
 /*
     Jump will make the character to stop first, then jump, and then resume.
     Pressing key multiple times will change jump mode. It applies to turning motion as well.
 */
     vector<vector<Motion>> jump_data;
 
-    int curr_speed = 1;
-    int curr_direction = 0;
+    std::mt19937 gen;
+    uniform_int_distribution<int> dis;
 
     int goal_speed = 1;
     int goal_direction = 0;
 
-    int jump_flag;
+    int jump_flag = 0;
     
     bool to_move;
     bool is_moving;

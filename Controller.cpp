@@ -17,7 +17,7 @@ void Controller::draw(){
     }
 }
 
-void Controller::load_frame(){
+Eigen::Vector3d Controller::load_frame(){
     vector<double> pose = this->getPose();
 
     int dataPtr = 0;
@@ -42,6 +42,8 @@ void Controller::load_frame(){
             segQ.push(curr->getSeg(i));
         }
     }
+
+    return Eigen::Vector3d(pose[0], pose[1], pose[2]);
 }
 
 void Controller::accelerate(){
@@ -193,7 +195,10 @@ Controller::Controller(){
     // Extract stop motion from the end of stopping walk motion.
     this->stop_data = this->walk[6];
     for (auto &motion : this->stop_data){
-        motion = Motion(motion.end() - 5, motion.end());
+        motion = Motion(motion.end() - 10, motion.end());
+        Eigen::Quaterniond stop_orientation = bvh_to_quaternion(Eigen::Vector3d(motion[0][3], motion[0][4], motion[0][5]));
+        motion = interpolate_motion(motion, motion, false);
+        motion = interpolate_motion(motion, motion, false);
     }
 
     predicted_motion = this->walk[2][0];
@@ -204,15 +209,13 @@ Controller::Controller(){
     this->dis = uniform_int_distribution<int>(INT_MIN, INT_MAX);
 
     curr_frame = 0;
-    next_motion_frame = 0;
-    interpolated_frame = 0;
 
     is_moving = true;
     to_move = true;
 }
 
 vector<double> Controller::getPose(){
-    if (curr_frame < next_motion_frame && !input_flag) {
+    if (curr_frame < predicted_motion.size() - 10 && !input_flag) {
         curr_frame += 1;
     }
     else {
@@ -225,27 +228,20 @@ vector<double> Controller::getPose(){
 }
 
 void Controller::updateState(){
-    if (curr_frame >= next_motion_frame){
+    if (curr_frame >= predicted_motion.size() - 10){
         if (jump_flag && !is_moving) {
             jump_flag = 0;
             dont_disturb = false;
         }
         else if (is_moving && !to_move) {
             is_moving = false;
-            dont_disturb = false;
         }
         else if (!is_moving && to_move) {
             is_moving = true;
-            dont_disturb = false;
         }
         else {
-            curr_direction = goal_direction;
-            curr_speed = goal_speed;
+            goal_direction = 0; 
         }
-        predicted_motion = Motion(predicted_motion.begin() + next_motion_frame, predicted_motion.end());
-        curr_frame = 0;
-        next_motion_frame = predicted_motion.size();
-        interpolated_frame = predicted_motion.size();
     }
 }
 
@@ -276,11 +272,9 @@ void Controller::predictMotion(){
 
         if (is_moving && !to_move) {
             next_motion = &(speed->at(6));
-            dont_disturb = true;
         }
         else if (!is_moving && to_move) {
             next_motion = &(speed->at(5));
-            dont_disturb = true;
         }
         else next_motion = &(speed->at(goal_direction + 2));
     }
@@ -289,12 +283,10 @@ void Controller::predictMotion(){
 
     // deleted part of already displayed motion.
     predicted_motion = Motion(predicted_motion.begin() + curr_frame, predicted_motion.end());
-    interpolated_frame -= curr_frame;
-    next_motion_frame -= curr_frame;
     curr_frame = 0;
 
     // if current motion is not finished, reinterpolate motion with the next motion
-    predicted_motion = interpolate_motion(predicted_motion, next_data, interpolated_frame, next_motion_frame);
+    predicted_motion = interpolate_motion(predicted_motion, next_data, false);
 
     input_flag = false;
 }
