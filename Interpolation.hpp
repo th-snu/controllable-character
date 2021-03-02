@@ -16,8 +16,6 @@ Eigen::Vector3d resample_pos(const Motion& motion, double frame);
 
 Eigen::Quaterniond resample_ori(const Motion& motion, double frame);
 
-Motion expand_motion(Motion motion, double frames);
-
 Eigen::Quaterniond slerp_frames_orientation(Motion frames);
 
 Motion interpolate_motion(Motion old_motion, Motion next_motion, bool time_shift);

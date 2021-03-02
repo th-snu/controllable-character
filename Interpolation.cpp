@@ -37,15 +37,6 @@ double get_y_rotation(Eigen::Quaterniond curr, Eigen::Quaterniond goal){
     return 2 * (goal.dot(alpha_plus) > goal.dot(alpha_minus) ? -alpha + PI/2 : -alpha - PI/2);
 }
 
-// simple interpolation to expand next motion
-Motion expand_motion(Motion motion, double frames){
-    using namespace Eigen;
-
-    while (motion.size() < frames){
-        
-    }
-}
-
 Eigen::Quaterniond slerp_frames_orientation(Motion frames){
     Eigen::Quaterniond ori = bvh_to_quaternion(Eigen::Vector3d(frames[0][3], frames[0][4], frames[0][5]));
     for (int i = 1; i < frames.size(); i++){
