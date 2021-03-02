@@ -45,6 +45,7 @@ Eigen::Quaterniond slerp_frames_orientation(Motion frames){
     return ori;
 }
 
+// uniform resampling
 Eigen::Vector3d resample_pos(const Motion& motion, double frame){
     vector<double> d1 = motion[(int)frame];
     vector<double> d2 = motion[(int)frame + 1];
@@ -64,6 +65,7 @@ Eigen::Quaterniond resample_ori(const Motion& motion, double frame){
     return b1.slerp(frame - (int)frame, b2);
 }
 
+// old_motion and next_motion must have at least 10 frames
 Motion interpolate_motion(Motion old_motion, Motion next_motion, bool time_shift){
     using namespace Eigen;
 
@@ -127,6 +129,9 @@ Motion interpolate_motion(Motion old_motion, Motion next_motion, bool time_shift
             }
             old_motion[i] = frame;
         }
+    }
+    else {
+        
     }
 
     old_motion.insert(old_motion.end(), next_motion.begin() + 10, next_motion.end());

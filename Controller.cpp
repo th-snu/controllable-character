@@ -140,7 +140,13 @@ Controller::Controller(){
     run.emplace_back(initializer_list<string>{"run, veer right", "49", "50"});
     run.emplace_back(initializer_list<string>{"run, 90-degree right turn", "53", "54"});
     run.emplace_back(initializer_list<string>{"run", "55"});
-    run.emplace_back(initializer_list<string>{"run&jog, sudden stop", "08", "57"}); //
+    run.emplace_back(initializer_list<string>{"run&jog, sudden stop", "08", "57"});
+
+    /*
+    
+    process and interpolate straight motion so the beginning and the ending would have the same orientation here
+    
+    */
 
     for(string data : jump){
         this->jump_data.emplace_back(vector<Motion>());
@@ -195,7 +201,7 @@ Controller::Controller(){
     // Extract stop motion from the end of stopping walk motion.
     this->stop_data = this->walk[6];
     for (auto &motion : this->stop_data){
-        motion = Motion(motion.end() - 10, motion.end());
+        motion = Motion(motion.end() - 20, motion.end());
         Eigen::Quaterniond stop_orientation = bvh_to_quaternion(Eigen::Vector3d(motion[0][3], motion[0][4], motion[0][5]));
         motion = interpolate_motion(motion, motion, false);
         motion = interpolate_motion(motion, motion, false);
