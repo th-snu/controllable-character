@@ -81,12 +81,9 @@ void Controller::turn_right(){
     input_flag = true;
 }
 
-void Controller::jump(){
-    if (jump_flag < 3){
-        jump_flag += 1;
-        to_move = false;
-    }
-    input_flag = true;
+void Controller::jump(int jumptype){
+    jump_flag = jumptype;
+    if (!is_moving && !to_move) input_flag = true;
 }
 
 Eigen::Vector3d Controller::rotation(){
@@ -195,10 +192,15 @@ void Controller::load_motion(){
     // Extract stop motion from the end of stopping walk motion.
     stop_data = walk_data[6];
     for (auto &motion : stop_data){
-        motion = Motion(motion.end() - 25, motion.end());
-        Eigen::Quaterniond stop_orientation = bvh_to_quaternion(Eigen::Vector3d(motion[0][3], motion[0][4], motion[0][5]));
-        motion = interpolate_motion(motion, motion, false);
-        motion = interpolate_motion(motion, motion, false);
+        motion = Motion(motion.end() - 5, motion.end());
+        Motion motion_copy = Motion(motion);
+        motion.insert(motion.end(), motion_copy.begin(), motion_copy.end());
+        motion.insert(motion.end(), motion_copy.begin(), motion_copy.end());
+        motion.insert(motion.end(), motion_copy.begin(), motion_copy.end());
+        motion.insert(motion.end(), motion_copy.begin(), motion_copy.end());
+        motion.insert(motion.end(), motion_copy.begin(), motion_copy.end());
+        motion.insert(motion.end(), motion_copy.begin(), motion_copy.end());
+        motion.insert(motion.end(), motion_copy.begin(), motion_copy.end());
     }
 
     /*
@@ -279,6 +281,30 @@ void Controller::load_motion(){
         }
     }
 
+    for (auto& motion : stop_data){
+        auto start_ori = bvh_to_quaternion(Eigen::Vector3d(motion[0][3], motion[0][4], motion[0][5]));
+        auto end_ori = bvh_to_quaternion(Eigen::Vector3d(motion[motion.size()-1][3], motion[motion.size()-1][4], motion[motion.size()-1][5]));
+        auto start_pos = Eigen::Vector3d(motion[0][0], motion[0][1], motion[0][2]);
+        auto end_pos = Eigen::Vector3d(motion[motion.size()-1][0], motion[motion.size()-1][1], motion[motion.size()-1][2]);
+
+        Eigen::Quaterniond rot = end_ori.inverse() * start_ori;
+        Eigen::Quaterniond zero_rot(Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()));
+        for (int i = 0; i < 10; i++){
+            int idx = motion.size() - 10 + i;
+            auto frame = motion[idx];
+            auto ori = bvh_to_quaternion(Eigen::Vector3d(frame[3], frame[4], frame[5]));
+            auto pos = Eigen::Vector3d(frame[0], frame[1], frame[2]);
+            auto rot_inter = zero_rot.slerp((double)(i + 1) * 0.1, rot);
+            auto trans = (start_pos - end_pos) * ((double)(i + 1) * 0.1);
+            ori *= rot_inter;
+            pos += trans;
+
+            Eigen::Vector3d new_ori = quaternion_to_bvh(ori);
+            motion[idx][0] = pos[0]; motion[idx][1] = pos[1]; motion[idx][2] = pos[2];
+            motion[idx][3] = new_ori[0]; motion[idx][4] = new_ori[1]; motion[idx][5] = new_ori[2];
+        }
+    }
+
     is_motion_loaded = true;
 }
 
@@ -309,10 +335,8 @@ Controller::Controller(){
 }
 
 vector<double> Controller::getPose(){
-    if (curr_frame < predicted_motion.size() - 10 && !input_flag) {
-        curr_frame += 1;
-    }
-    else {
+    curr_frame += 1;
+    if (curr_frame >= predicted_motion.size() - 10 || input_flag) {
         this->updateState();
         this->predictMotion();
     }
@@ -342,7 +366,9 @@ void Controller::predictMotion(){
 /*
     Choose motion that should be followed, and interpolate motion data.
 */
-    if (dont_disturb) return;
+    if (dont_disturb && curr_frame > 15) {
+        return;
+    }
 
     vector<Motion>* next_motion = {};
     if (jump_flag && !is_moving) {

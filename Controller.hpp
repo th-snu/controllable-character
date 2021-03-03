@@ -25,7 +25,7 @@ public:
     void mode_change();
     void turn_left();
     void turn_right();
-    void jump();
+    void jump(int jumptype);
 
     Eigen::Vector3d rotation();
     Eigen::Vector3d translation();

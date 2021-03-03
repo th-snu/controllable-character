@@ -84,8 +84,14 @@ void UserInterface::keyboard(unsigned char key, int x, int y) {
 	case 'd':
 		currView->move(Camera::Right);
 		break;
-	case ' ':
-		controller.jump();
+	case 'z':
+		controller.jump(1);
+		break;
+	case 'x':
+		controller.jump(2);
+		break;
+	case 'c':
+		controller.jump(3);
 		break;
 	case 'r':
 		controller.mode_change();

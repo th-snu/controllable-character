@@ -106,7 +106,7 @@ vector<double> interpolate_frame(const vector<double> frame1, const vector<doubl
 Motion interpolate_motion(Motion old_motion, Motion next_motion, bool time_shift){
     using namespace Eigen;
 
-    int sample_frames = 20;
+    int sample_frames = 10;
     if(old_motion.size() < sample_frames) sample_frames = old_motion.size();
 
     if(old_motion.size() > sample_frames){
