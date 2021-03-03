@@ -168,7 +168,7 @@ void UserInterface::helpText() {
 	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
 	glRasterPos2i(100, 120);
-	glutBitmapString(GLUT_BITMAP_HELVETICA_18, "W A S D: Camera Move\nArrow Keys: Accelerate/Turn Character\nESC: Exit The Program");
+	glutBitmapString(GLUT_BITMAP_HELVETICA_18, "W A S D: Camera Move\nArrow Keys: Accelerate/Turn Character\nR: Stop/Move\nZ X C: Jump\nESC: Exit The Program");
 
 	glMatrixMode(GL_MODELVIEW);
     glPopMatrix();
