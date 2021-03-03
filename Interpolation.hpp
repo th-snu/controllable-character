@@ -14,7 +14,7 @@ Eigen::Quaterniond slerp_frames_orientation(Motion frames);
 
 Eigen::Vector3d resample_pos(const Motion& motion, double frame);
 
-Eigen::Quaterniond resample_ori(const Motion& motion, double frame);
+vector<double> resample_ori(const Motion& motion, double frame);
 
 Eigen::Quaterniond slerp_frames_orientation(Motion frames);
 

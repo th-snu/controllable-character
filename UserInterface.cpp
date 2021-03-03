@@ -67,6 +67,7 @@ void UserInterface::nextFrame(){
 	auto old_pos = pos;
 	pos = controller.load_frame();
 	currView->moveTo(currView->getEye() + pos.cast<float>() - old_pos.cast<float>());
+
 }
 
 void UserInterface::keyboard(unsigned char key, int x, int y) {
@@ -141,11 +142,11 @@ void UserInterface::drawGridPlane() {
 	int z_offset = currView->getEye()[2];
 	x_offset = x_offset - (x_offset % 100);
 	z_offset = z_offset - (z_offset % 100);
-	for (int i = -1000; i < 1001; i+=100){
-		glVertex3f(i + x_offset, 0, -1000 + z_offset);
-		glVertex3f(i + x_offset, 0, 1000 + z_offset);
-		glVertex3f(1000 + x_offset, 0, i + z_offset);
-		glVertex3f(-1000 + x_offset, 0, i + z_offset);
+	for (int i = -2000; i < 2001; i+=100){
+		glVertex3f(i + x_offset, 0, -2000 + z_offset);
+		glVertex3f(i + x_offset, 0, 2000 + z_offset);
+		glVertex3f(2000 + x_offset, 0, i + z_offset);
+		glVertex3f(-2000 + x_offset, 0, i + z_offset);
 	}
 	glEnd();
 }

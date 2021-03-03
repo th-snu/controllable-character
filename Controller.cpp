@@ -1,5 +1,15 @@
 #include "Controller.hpp"
 
+vector<vector<Motion>> Controller::walk_data = vector<vector<Motion>>();
+vector<vector<Motion>> Controller::fastwalk_data = vector<vector<Motion>>();
+vector<vector<Motion>> Controller::jog_data = vector<vector<Motion>>();
+vector<vector<Motion>> Controller::run_data = vector<vector<Motion>>();
+
+vector<Motion> Controller::stop_data = vector<Motion>();
+vector<vector<Motion>> Controller::jump_data = vector<vector<Motion>>();
+
+bool Controller::is_motion_loaded = false;
+
 Motion extractMotion(const string& filename){
     BVHReader reader(filename);
     if (reader.loadFile()){
@@ -87,17 +97,7 @@ Eigen::Vector3d Controller::translation(){
     return this->root.front()->getTrans();
 }
 
-Controller::Controller(){
-    string model_file = "./MotionData2/new/Trial001.bvh";
-    BVHReader model_bvh(model_file);
-    
-    if(!model_bvh.loadFile()){
-        cout << "Motion data file is not found." << endl;
-        exit(0);
-    }
-
-    root = move(model_bvh.getRoots());
-
+void Controller::load_motion(){
     string folder = "./MotionData2/cmu/";
 
     // list filename here for each motion
@@ -143,59 +143,59 @@ Controller::Controller(){
     run.emplace_back(initializer_list<string>{"run&jog, sudden stop", "08", "57"});
 
     for(string data : jump){
-        this->jump_data.emplace_back(vector<Motion>());
+        jump_data.emplace_back(vector<Motion>());
         string filename = "16_" + data + "_jump.bvh";
-        this->jump_data[0].push_back(extractMotion(folder + filename));
+        jump_data[0].push_back(extractMotion(folder + filename));
     }
 
     for(string data : highjump){
-        this->jump_data.emplace_back(vector<Motion>());
+        jump_data.emplace_back(vector<Motion>());
         string filename = "16_" + data + "_high jump.bvh";
-        this->jump_data[1].push_back(extractMotion(folder + filename));
+        jump_data[1].push_back(extractMotion(folder + filename));
     }
 
     for(string data : forwardjump){
-        this->jump_data.emplace_back(vector<Motion>());
+        jump_data.emplace_back(vector<Motion>());
         string filename = "16_" + data + "_forward jump.bvh";
-        this->jump_data[2].push_back(extractMotion(folder + filename));
+        jump_data[2].push_back(extractMotion(folder + filename));
     }
 
     for(vector<string> pose : walk){
-        this->walk.emplace_back(vector<Motion>());
+        walk_data.emplace_back(vector<Motion>());
         for(int i = 1; i < pose.size(); i++){
             string filename = "16_" + pose[i] + "_" + pose[0] + ".bvh";
-            this->walk[this->walk.size() - 1].push_back(extractMotion(folder + filename));
+            walk_data[walk_data.size() - 1].push_back(extractMotion(folder + filename));
         }
     }
 
     for(vector<string> pose : fastwalk){
-        this->fastwalk.emplace_back(vector<Motion>());
+        fastwalk_data.emplace_back(vector<Motion>());
         for(int i = 1; i < pose.size(); i++){
             string filename = "16_" + pose[i] + "_" + pose[0] + ".bvh";
-            this->fastwalk[this->fastwalk.size() - 1].push_back(extractMotion(folder + filename));
+            fastwalk_data[fastwalk_data.size() - 1].push_back(extractMotion(folder + filename));
         }
     }
 
     for(vector<string> pose : jog){
-        this->jog.emplace_back(vector<Motion>());
+        jog_data.emplace_back(vector<Motion>());
         for(int i = 1; i < pose.size(); i++){
             string filename = "16_" + pose[i] + "_" + pose[0] + ".bvh";
-            this->jog[this->jog.size() - 1].push_back(extractMotion(folder + filename));
+            jog_data[jog_data.size() - 1].push_back(extractMotion(folder + filename));
         }
     }
 
     for(vector<string> pose : run){
-        this->run.emplace_back(vector<Motion>());
+        run_data.emplace_back(vector<Motion>());
         for(int i = 1; i < pose.size(); i++){
             string filename = "16_" + pose[i] + "_" + pose[0] + ".bvh";
-            this->run[this->run.size() - 1].push_back(extractMotion(folder + filename));
+            run_data[run_data.size() - 1].push_back(extractMotion(folder + filename));
         }
     }
 
     // Extract stop motion from the end of stopping walk motion.
-    this->stop_data = this->walk[6];
-    for (auto &motion : this->stop_data){
-        motion = Motion(motion.end() - 15, motion.end());
+    stop_data = walk_data[6];
+    for (auto &motion : stop_data){
+        motion = Motion(motion.end() - 25, motion.end());
         Eigen::Quaterniond stop_orientation = bvh_to_quaternion(Eigen::Vector3d(motion[0][3], motion[0][4], motion[0][5]));
         motion = interpolate_motion(motion, motion, false);
         motion = interpolate_motion(motion, motion, false);
@@ -204,10 +204,98 @@ Controller::Controller(){
     /*
     
     process and interpolate straight motion so the beginning and the ending would have the same orientation here
+    also make stop motion begin and end at the same position
     
     */
+    for (auto& motion : walk_data[2]){
+        auto start_ori = bvh_to_quaternion(Eigen::Vector3d(motion[0][3], motion[0][4], motion[0][5]));
+        auto end_ori = bvh_to_quaternion(Eigen::Vector3d(motion[motion.size()-1][3], motion[motion.size()-1][4], motion[motion.size()-1][5]));
 
-    predicted_motion = this->walk[2][0];
+        Eigen::Quaterniond rot(Eigen::AngleAxisd(get_y_rotation(end_ori, start_ori), Eigen::Vector3d::UnitY()));
+        Eigen::Quaterniond zero_rot(Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()));
+        for (int i = 0; i < 10; i++){
+            int idx = motion.size() - 10 + i;
+            auto frame = motion[idx];
+            auto ori = bvh_to_quaternion(Eigen::Vector3d(frame[3], frame[4], frame[5]));
+            auto rot_inter = zero_rot.slerp((double)(i + 1) * 0.1, rot);
+            ori *= rot_inter;
+
+            Eigen::Vector3d new_ori = quaternion_to_bvh(ori);
+            motion[idx][3] = new_ori[0]; motion[idx][4] = new_ori[1]; motion[idx][5] = new_ori[2];
+        }
+    }
+
+    for (auto& motion : fastwalk_data[2]){
+        auto start_ori = bvh_to_quaternion(Eigen::Vector3d(motion[0][3], motion[0][4], motion[0][5]));
+        auto end_ori = bvh_to_quaternion(Eigen::Vector3d(motion[motion.size()-1][3], motion[motion.size()-1][4], motion[motion.size()-1][5]));
+
+        Eigen::Quaterniond rot(Eigen::AngleAxisd(get_y_rotation(end_ori, start_ori), Eigen::Vector3d::UnitY()));
+        Eigen::Quaterniond zero_rot(Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()));
+        for (int i = 0; i < 10; i++){
+            int idx = motion.size() - 10 + i;
+            auto frame = motion[idx];
+            auto ori = bvh_to_quaternion(Eigen::Vector3d(frame[3], frame[4], frame[5]));
+            auto rot_inter = zero_rot.slerp((double)(i + 1) * 0.1, rot);
+            ori *= rot_inter;
+
+            Eigen::Vector3d new_ori = quaternion_to_bvh(ori);
+            motion[idx][3] = new_ori[0]; motion[idx][4] = new_ori[1]; motion[idx][5] = new_ori[2];
+        }
+    }
+
+    for (auto& motion : jog_data[2]){
+        auto start_ori = bvh_to_quaternion(Eigen::Vector3d(motion[0][3], motion[0][4], motion[0][5]));
+        auto end_ori = bvh_to_quaternion(Eigen::Vector3d(motion[motion.size()-1][3], motion[motion.size()-1][4], motion[motion.size()-1][5]));
+
+        Eigen::Quaterniond rot(Eigen::AngleAxisd(get_y_rotation(end_ori, start_ori), Eigen::Vector3d::UnitY()));
+        Eigen::Quaterniond zero_rot(Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()));
+        for (int i = 0; i < 10; i++){
+            int idx = motion.size() - 10 + i;
+            auto frame = motion[idx];
+            auto ori = bvh_to_quaternion(Eigen::Vector3d(frame[3], frame[4], frame[5]));
+            auto rot_inter = zero_rot.slerp((double)(i + 1) * 0.1, rot);
+            ori *= rot_inter;
+
+            Eigen::Vector3d new_ori = quaternion_to_bvh(ori);
+            motion[idx][3] = new_ori[0]; motion[idx][4] = new_ori[1]; motion[idx][5] = new_ori[2];
+        }
+    }
+
+    for (auto& motion : run_data[2]){
+        auto start_ori = bvh_to_quaternion(Eigen::Vector3d(motion[0][3], motion[0][4], motion[0][5]));
+        auto end_ori = bvh_to_quaternion(Eigen::Vector3d(motion[motion.size()-1][3], motion[motion.size()-1][4], motion[motion.size()-1][5]));
+
+        Eigen::Quaterniond rot = end_ori.inverse() * start_ori;
+        Eigen::Quaterniond zero_rot(Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()));
+        for (int i = 0; i < 10; i++){
+            int idx = motion.size() - 10 + i;
+            auto frame = motion[idx];
+            auto ori = bvh_to_quaternion(Eigen::Vector3d(frame[3], frame[4], frame[5]));
+            auto rot_inter = zero_rot.slerp((double)(i + 1) * 0.1, rot);
+            ori *= rot_inter;
+
+            Eigen::Vector3d new_ori = quaternion_to_bvh(ori);
+            motion[idx][3] = new_ori[0]; motion[idx][4] = new_ori[1]; motion[idx][5] = new_ori[2];
+        }
+    }
+
+    is_motion_loaded = true;
+}
+
+Controller::Controller(){
+    if(!is_motion_loaded) load_motion();
+
+    string model_file = "./MotionData2/new/Trial001.bvh";
+    BVHReader model_bvh(model_file);
+    
+    if(!model_bvh.loadFile()){
+        cout << "Motion data file is not found." << endl;
+        exit(0);
+    }
+
+    root = move(model_bvh.getRoots());
+
+    predicted_motion = walk_data[2][0];
     input_flag = true;
 
     random_device rd;
@@ -266,13 +354,13 @@ void Controller::predictMotion(){
         vector<vector<Motion>>* speed = nullptr;
         switch (goal_speed) {
             case 2:
-                speed = &fastwalk; break;
+                speed = &fastwalk_data; break;
             case 3:
-                speed = &jog; break;
+                speed = &jog_data; break;
             case 4:
-                speed = &run; break;
+                speed = &run_data; break;
             default:
-                speed = &walk; break;
+                speed = &walk_data; break;
         }
 
         if (is_moving && !to_move) {

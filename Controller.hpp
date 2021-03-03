@@ -35,18 +35,20 @@ private:
     From left 90 turn to right 90 turn and begin/stop motion.
     Each pointer points array of corresponding motion datas.
 */
-    vector<vector<Motion>> walk;
-    vector<vector<Motion>> fastwalk;
-    vector<vector<Motion>> jog;
-    vector<vector<Motion>> run;
+    static void load_motion();
+    static bool is_motion_loaded;
+    static vector<vector<Motion>> walk_data;
+    static vector<vector<Motion>> fastwalk_data;
+    static vector<vector<Motion>> jog_data;
+    static vector<vector<Motion>> run_data;
 
-    vector<Motion> stop_data;
+    static vector<Motion> stop_data;
 
 /*
     Jump will make the character to stop first, then jump, and then resume.
     Pressing key multiple times will change jump mode. It applies to turning motion as well.
 */
-    vector<vector<Motion>> jump_data;
+    static vector<vector<Motion>> jump_data;
 
     std::mt19937 gen;
     uniform_int_distribution<int> dis;

@@ -56,32 +56,71 @@ Eigen::Vector3d resample_pos(const Motion& motion, double frame){
     return b1 * (1-t) + b2 * t;
 }
 
-Eigen::Quaterniond resample_ori(const Motion& motion, double frame){
+vector<double> resample_ori(const Motion& motion, double frame){
     vector<double> d1 = motion[(int)frame];
     vector<double> d2 = motion[(int)frame + 1];
-    Eigen::Quaterniond b1 = bvh_to_quaternion(d1[3], d1[4], d1[5]);
-    Eigen::Quaterniond b2 = bvh_to_quaternion(d2[3], d2[4], d2[5]);
+
+    vector<double> res;
+    for (int idx = 3; idx < motion.size(); idx += 3){
+        Eigen::Quaterniond b1 = bvh_to_quaternion(d1[idx], d1[idx+1], d1[idx+2]);
+        Eigen::Quaterniond b2 = bvh_to_quaternion(d2[idx], d2[idx+1], d2[idx+2]);
+        auto b_new = quaternion_to_bvh(b1.slerp(frame - (int)frame, b2));
+        res.push_back(b_new[0]);
+        res.push_back(b_new[1]);
+        res.push_back(b_new[2]);
+    }
     
-    return b1.slerp(frame - (int)frame, b2);
+    return res;
+}
+
+vector<double> resample_frame(const Motion& motion, double frame){
+    Eigen::Vector3d res_pos = resample_pos(motion, frame);
+    vector<double> res_vec(res_pos.data(), res_pos.data() + 3);
+    vector<double> res_ori = resample_ori(motion, frame);
+    res_vec.insert(res_vec.end(), res_ori.begin(), res_ori.end());
+
+    return res_vec;
+}
+
+vector<double> interpolate_frame(const vector<double> frame1, const vector<double> frame2, double rate){
+    vector<double> frame;
+
+    frame.push_back(frame1[0] * (1.0 - rate) + frame2[0] * rate);
+    frame.push_back(frame1[1] * (1.0 - rate) + frame2[1] * rate);
+    frame.push_back(frame1[2] * (1.0 - rate) + frame2[2] * rate);
+
+    int var_count = frame1.size();
+    for (int j = 3; j < var_count; j += 3){
+        auto q1 = bvh_to_quaternion(frame1[j], frame1[j+1], frame1[j+2]);
+        auto q2 = bvh_to_quaternion(frame2[j], frame2[j+1], frame2[j+2]);
+        auto new_ori = quaternion_to_bvh(q1.slerp(rate, q2));
+        frame.push_back(new_ori[0]);
+        frame.push_back(new_ori[1]);
+        frame.push_back(new_ori[2]);
+    }
+    
+    return frame;
 }
 
 // old_motion and next_motion must have at least 10 frames
 Motion interpolate_motion(Motion old_motion, Motion next_motion, bool time_shift){
     using namespace Eigen;
 
-    if(old_motion.size() > 10){
-        old_motion = Motion(old_motion.begin(), old_motion.begin() + 10);
+    int sample_frames = 20;
+    if(old_motion.size() < sample_frames) sample_frames = old_motion.size();
+
+    if(old_motion.size() > sample_frames){
+        old_motion = Motion(old_motion.begin(), old_motion.begin() + sample_frames);
     }
 
-    Motion last_frames = old_motion;
-    Motion next_frames = Motion(next_motion.begin(), next_motion.begin() + 10);
-
-    Vector3d last_pos(last_frames[0][0], last_frames[0][1], last_frames[0][2]);
-    Vector3d next_pos(next_frames[0][0], next_frames[0][1], next_frames[0][2]);
+    Vector3d last_pos(old_motion[0][0], old_motion[0][1], old_motion[0][2]);
+    Vector3d next_pos(next_motion[0][0], next_motion[0][1], next_motion[0][2]);
 
     // preprocess motion data instead so the beginning and the ending would have the same orientation
-    Quaterniond last_ori = slerp_frames_orientation(last_frames);
-    Quaterniond next_ori = slerp_frames_orientation(next_frames);
+    auto old_frame = old_motion[sample_frames-1];
+    auto next_frame = next_motion[0];
+    Quaterniond last_ori = bvh_to_quaternion(Eigen::Vector3d(old_frame[3], old_frame[4], old_frame[5]));
+    Quaterniond next_ori = bvh_to_quaternion(Eigen::Vector3d(next_frame[3], next_frame[4], next_frame[5]));
 
     Quaterniond rot(AngleAxisd(get_y_rotation(next_ori, last_ori), Vector3d::UnitY()));
 
@@ -100,41 +139,57 @@ Motion interpolate_motion(Motion old_motion, Motion next_motion, bool time_shift
         frame[3] = new_ori[0]; frame[4] = new_ori[1]; frame[5] = new_ori[2];
     }
 
-    next_frames = Motion(next_motion.begin(), next_motion.begin() + 10);
+    double old_delta = 0.0;
+    double new_delta = 0.0;
+
+    Motion last_frames = old_motion;
+    Motion next_frames = Motion(next_motion.begin(), next_motion.begin() + sample_frames);
+
+    for (int i = 0; i < sample_frames - 1; i++){
+        old_delta += Vector3d(last_frames[i+1][0] - last_frames[i][0], last_frames[i+1][1] - last_frames[i][1], last_frames[i+1][2] - last_frames[i][2]).norm();
+        new_delta += Vector3d(next_frames[i+1][0] - next_frames[i][0], next_frames[i+1][1] - next_frames[i][1], next_frames[i+1][2] - next_frames[i][2]).norm();
+    }
 
     // interpolate old motion with new motion
     if (!time_shift){
-        double old_delta = 0.0;
-        double new_delta = 0.0;
+        for (int i = 0; i < sample_frames; i++)
+            old_motion[i] = interpolate_frame(last_frames[i], next_frames[i], (double)i / sample_frames);
 
-        for (int i = 0; i < 9; i++){
-            old_delta += Vector3d(last_frames[i+1][0] - last_frames[i][0], last_frames[i+1][1] - last_frames[i][1], last_frames[i+1][2] - last_frames[i][2]).norm();
-            new_delta += Vector3d(next_frames[i+1][0] - next_frames[i][0], next_frames[i+1][1] - next_frames[i][1], next_frames[i+1][2] - next_frames[i][2]).norm();
-        }
-
-        for (int i = 0; i < 10; i++){
-            vector<double> frame;
-            frame.push_back((last_frames[i][0] * i + next_frames[i][0] * (10-i)) / 10);
-            frame.push_back((last_frames[i][1] * i + next_frames[i][1] * (10-i)) / 10);
-            frame.push_back((last_frames[i][2] * i + next_frames[i][2] * (10-i)) / 10);
-
-            int var_count = last_frames[0].size();
-            for (int j = 3; j < var_count; j += 3){
-                auto q1 = bvh_to_quaternion(last_frames[i][j], last_frames[i][j+1], last_frames[i][j+2]);
-                auto q2 = bvh_to_quaternion(next_frames[i][j], next_frames[i][j+1], next_frames[i][j+2]);
-                auto new_ori = quaternion_to_bvh(q1.slerp(0.1 * i, q2));
-                frame.push_back(new_ori[0]);
-                frame.push_back(new_ori[1]);
-                frame.push_back(new_ori[2]);
-            }
-            old_motion[i] = frame;
-        }
+        old_motion.insert(old_motion.end(), next_motion.begin() + sample_frames, next_motion.end());
+        return old_motion;
     }
     else {
-        
-    }
+        int next_sample_frames = old_delta * sample_frames / new_delta;
+        int next_frames = next_motion.size();
 
-    old_motion.insert(old_motion.end(), next_motion.begin() + 10, next_motion.end());
-    
-    return old_motion;
+        bool is_expanded = false;
+
+        // ensure that next motion has enough length
+        while (next_sample_frames > next_motion.size()){
+            is_expanded = true;
+            next_motion = interpolate_motion(next_motion, next_motion, false);
+        }
+
+        int interpolated_frames = (next_sample_frames + sample_frames) / 2;
+
+        Motion resample_old;
+        Motion resample_next;
+
+        double old_rate = (double) sample_frames / interpolated_frames;
+        double new_rate = (double) next_sample_frames / interpolated_frames;
+
+        Motion interpolated_motion;
+        for (int i = 0; i < interpolated_frames; i++){
+            double t = (double) i / interpolated_frames;
+            double resampled_t = (- 2 * pow(t, 3) + 3 * pow (t, 2)) + old_rate * (pow(t, 3) - 2 * pow(t, 2) + t) + new_rate * (pow(t, 3) - pow(t, 2));
+            auto resampled_old_frame = resample_frame(old_motion, old_rate * resampled_t * sample_frames);
+            auto resampled_next_frame = resample_frame(next_motion, new_rate * resampled_t * next_sample_frames);
+
+            interpolated_motion.push_back(interpolate_frame(resampled_old_frame, resampled_next_frame, (double) i / interpolated_frames));
+        }
+
+        if (!is_expanded){
+            interpolated_motion.insert(interpolated_motion.end(), next_motion.begin() + next_sample_frames, next_motion.end());
+        }
+    }
 }
