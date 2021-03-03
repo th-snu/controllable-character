@@ -172,9 +172,6 @@ Motion interpolate_motion(Motion old_motion, Motion next_motion, bool time_shift
 
         int interpolated_frames = (next_sample_frames + sample_frames) / 2;
 
-        Motion resample_old;
-        Motion resample_next;
-
         double old_rate = (double) sample_frames / interpolated_frames;
         double new_rate = (double) next_sample_frames / interpolated_frames;
 
