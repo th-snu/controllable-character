@@ -405,7 +405,7 @@ void Controller::predictMotion(){
     curr_frame = 0;
 
     // if current motion is not finished, reinterpolate motion with the next motion
-    predicted_motion = interpolate_motion(predicted_motion, next_data, false);
+    predicted_motion = interpolate_motion(predicted_motion, next_data, true);
 
     input_flag = false;
 }

@@ -61,7 +61,7 @@ vector<double> resample_ori(const Motion& motion, double frame){
     vector<double> d2 = motion[(int)frame + 1];
 
     vector<double> res;
-    for (int idx = 3; idx < motion.size(); idx += 3){
+    for (int idx = 3; idx < motion[0].size(); idx += 3){
         Eigen::Quaterniond b1 = bvh_to_quaternion(d1[idx], d1[idx+1], d1[idx+2]);
         Eigen::Quaterniond b2 = bvh_to_quaternion(d2[idx], d2[idx+1], d2[idx+2]);
         auto b_new = quaternion_to_bvh(b1.slerp(frame - (int)frame, b2));
@@ -74,6 +74,9 @@ vector<double> resample_ori(const Motion& motion, double frame){
 }
 
 vector<double> resample_frame(const Motion& motion, double frame){
+    if (frame >= motion.size() - 1) frame = motion.size() - 1.0001;
+    if (frame < 0) frame = 0;
+
     Eigen::Vector3d res_pos = resample_pos(motion, frame);
     vector<double> res_vec(res_pos.data(), res_pos.data() + 3);
     vector<double> res_ori = resample_ori(motion, frame);
@@ -160,33 +163,35 @@ Motion interpolate_motion(Motion old_motion, Motion next_motion, bool time_shift
     }
     else {
         int next_sample_frames = old_delta * sample_frames / new_delta;
-        int next_frames = next_motion.size();
-
-        bool is_expanded = false;
+        if (next_sample_frames > 30) next_sample_frames = 30;
 
         // ensure that next motion has enough length
         while (next_sample_frames > next_motion.size()){
-            is_expanded = true;
-            next_motion = interpolate_motion(next_motion, next_motion, false);
+            Motion expanded_motion = interpolate_motion(Motion(next_motion.end() - 10, next_motion.end()), next_motion, false);
+            next_motion.insert(next_motion.end(), expanded_motion.begin(), expanded_motion.end());
         }
 
         int interpolated_frames = (next_sample_frames + sample_frames) / 2;
 
-        double old_rate = (double) sample_frames / interpolated_frames;
-        double new_rate = (double) next_sample_frames / interpolated_frames;
+        double old_rate = (double) (sample_frames - 1) / (interpolated_frames - 1);
+        double new_rate = (double) (next_sample_frames - 1) / (interpolated_frames - 1);
 
         Motion interpolated_motion;
         for (int i = 0; i < interpolated_frames; i++){
             double t = (double) i / interpolated_frames;
-            double resampled_t = (- 2 * pow(t, 3) + 3 * pow (t, 2)) + old_rate * (pow(t, 3) - 2 * pow(t, 2) + t) + new_rate * (pow(t, 3) - pow(t, 2));
-            auto resampled_old_frame = resample_frame(old_motion, old_rate * resampled_t * sample_frames);
-            auto resampled_next_frame = resample_frame(next_motion, new_rate * resampled_t * next_sample_frames);
+            t = (- 2 * pow(t, 3) + 3 * pow (t, 2)) + old_rate * (pow(t, 3) - 2 * pow(t, 2) + t) + new_rate * (pow(t, 3) - pow(t, 2));
 
-            interpolated_motion.push_back(interpolate_frame(resampled_old_frame, resampled_next_frame, (double) i / interpolated_frames));
+            double sample_idx = t * (sample_frames - 1);
+            auto resampled_old_frame = resample_frame(old_motion, sample_idx);
+
+            sample_idx = t * (next_sample_frames - 1);
+            auto resampled_next_frame = resample_frame(next_motion, sample_idx);
+
+            interpolated_motion.push_back(interpolate_frame(resampled_old_frame, resampled_next_frame, t));
         }
 
-        if (!is_expanded){
+        if (next_motion.size() > next_sample_frames)
             interpolated_motion.insert(interpolated_motion.end(), next_motion.begin() + next_sample_frames, next_motion.end());
-        }
+        return interpolated_motion;
     }
 }
