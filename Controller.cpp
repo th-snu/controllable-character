@@ -94,6 +94,24 @@ Eigen::Vector3d Controller::translation(){
     return this->root.front()->getTrans();
 }
 
+void match_orientation (Motion& motion){
+    auto start_ori = bvh_to_quaternion(Eigen::Vector3d(motion[0][3], motion[0][4], motion[0][5]));
+    auto end_ori = bvh_to_quaternion(Eigen::Vector3d(motion[motion.size()-1][3], motion[motion.size()-1][4], motion[motion.size()-1][5]));
+
+    double angle = get_y_rotation(end_ori, start_ori);
+
+    for (int i = 0; i < 5; i++){
+        int idx = motion.size() - 5 + i;
+        auto frame = motion[idx];
+        auto ori = bvh_to_quaternion(Eigen::Vector3d(frame[3], frame[4], frame[5]));
+        Eigen::Quaterniond rot(Eigen::AngleAxisd(angle * (0.2 * (i + 1)), Eigen::Vector3d::UnitY()));
+        ori = rot * ori;
+
+        Eigen::Vector3d new_ori = quaternion_to_bvh(ori);
+        motion[idx][3] = new_ori[0]; motion[idx][4] = new_ori[1]; motion[idx][5] = new_ori[2];
+    }
+}
+
 void Controller::load_motion(){
     string folder = "./MotionData2/cmu/";
 
@@ -210,75 +228,19 @@ void Controller::load_motion(){
     
     */
     for (auto& motion : walk_data[2]){
-        auto start_ori = bvh_to_quaternion(Eigen::Vector3d(motion[0][3], motion[0][4], motion[0][5]));
-        auto end_ori = bvh_to_quaternion(Eigen::Vector3d(motion[motion.size()-1][3], motion[motion.size()-1][4], motion[motion.size()-1][5]));
-
-        Eigen::Quaterniond rot(Eigen::AngleAxisd(get_y_rotation(end_ori, start_ori), Eigen::Vector3d::UnitY()));
-        Eigen::Quaterniond zero_rot(Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()));
-        for (int i = 0; i < 10; i++){
-            int idx = motion.size() - 10 + i;
-            auto frame = motion[idx];
-            auto ori = bvh_to_quaternion(Eigen::Vector3d(frame[3], frame[4], frame[5]));
-            auto rot_inter = zero_rot.slerp((double)(i + 1) * 0.1, rot);
-            ori *= rot_inter;
-
-            Eigen::Vector3d new_ori = quaternion_to_bvh(ori);
-            motion[idx][3] = new_ori[0]; motion[idx][4] = new_ori[1]; motion[idx][5] = new_ori[2];
-        }
+        match_orientation(motion);
     }
 
     for (auto& motion : fastwalk_data[2]){
-        auto start_ori = bvh_to_quaternion(Eigen::Vector3d(motion[0][3], motion[0][4], motion[0][5]));
-        auto end_ori = bvh_to_quaternion(Eigen::Vector3d(motion[motion.size()-1][3], motion[motion.size()-1][4], motion[motion.size()-1][5]));
-
-        Eigen::Quaterniond rot(Eigen::AngleAxisd(get_y_rotation(end_ori, start_ori), Eigen::Vector3d::UnitY()));
-        Eigen::Quaterniond zero_rot(Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()));
-        for (int i = 0; i < 10; i++){
-            int idx = motion.size() - 10 + i;
-            auto frame = motion[idx];
-            auto ori = bvh_to_quaternion(Eigen::Vector3d(frame[3], frame[4], frame[5]));
-            auto rot_inter = zero_rot.slerp((double)(i + 1) * 0.1, rot);
-            ori *= rot_inter;
-
-            Eigen::Vector3d new_ori = quaternion_to_bvh(ori);
-            motion[idx][3] = new_ori[0]; motion[idx][4] = new_ori[1]; motion[idx][5] = new_ori[2];
-        }
+        match_orientation(motion);
     }
 
     for (auto& motion : jog_data[2]){
-        auto start_ori = bvh_to_quaternion(Eigen::Vector3d(motion[0][3], motion[0][4], motion[0][5]));
-        auto end_ori = bvh_to_quaternion(Eigen::Vector3d(motion[motion.size()-1][3], motion[motion.size()-1][4], motion[motion.size()-1][5]));
-
-        Eigen::Quaterniond rot(Eigen::AngleAxisd(get_y_rotation(end_ori, start_ori), Eigen::Vector3d::UnitY()));
-        Eigen::Quaterniond zero_rot(Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()));
-        for (int i = 0; i < 10; i++){
-            int idx = motion.size() - 10 + i;
-            auto frame = motion[idx];
-            auto ori = bvh_to_quaternion(Eigen::Vector3d(frame[3], frame[4], frame[5]));
-            auto rot_inter = zero_rot.slerp((double)(i + 1) * 0.1, rot);
-            ori *= rot_inter;
-
-            Eigen::Vector3d new_ori = quaternion_to_bvh(ori);
-            motion[idx][3] = new_ori[0]; motion[idx][4] = new_ori[1]; motion[idx][5] = new_ori[2];
-        }
+        match_orientation(motion);
     }
 
     for (auto& motion : run_data[2]){
-        auto start_ori = bvh_to_quaternion(Eigen::Vector3d(motion[0][3], motion[0][4], motion[0][5]));
-        auto end_ori = bvh_to_quaternion(Eigen::Vector3d(motion[motion.size()-1][3], motion[motion.size()-1][4], motion[motion.size()-1][5]));
-
-        Eigen::Quaterniond rot = end_ori.inverse() * start_ori;
-        Eigen::Quaterniond zero_rot(Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()));
-        for (int i = 0; i < 10; i++){
-            int idx = motion.size() - 10 + i;
-            auto frame = motion[idx];
-            auto ori = bvh_to_quaternion(Eigen::Vector3d(frame[3], frame[4], frame[5]));
-            auto rot_inter = zero_rot.slerp((double)(i + 1) * 0.1, rot);
-            ori *= rot_inter;
-
-            Eigen::Vector3d new_ori = quaternion_to_bvh(ori);
-            motion[idx][3] = new_ori[0]; motion[idx][4] = new_ori[1]; motion[idx][5] = new_ori[2];
-        }
+        match_orientation(motion);
     }
 
     for (auto& motion : stop_data){

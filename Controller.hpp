@@ -44,6 +44,8 @@ private:
 
     static vector<Motion> stop_data;
 
+    double orientation;
+
 /*
     Jump will make the character to stop first, then jump, and then resume.
     Pressing key multiple times will change jump mode. It applies to turning motion as well.
